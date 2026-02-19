@@ -129,5 +129,65 @@ export const database = new sqlite3.Database(getDatabasePath(), (error) => {
         UPDATE coaches SET updatedAt = CURRENT_TIMESTAMP WHERE steamid = OLD.steamid;
     END;
   `);
+
+    /* Create cameras table */
+    database.run(
+      `CREATE TABLE IF NOT EXISTS cameras (
+        _id TEXT PRIMARY KEY NOT NULL UNIQUE,
+        steamid TEXT NOT NULL UNIQUE,
+        url TEXT NOT NULL,
+        overlayName TEXT,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`,
+      (error) => {
+        if (error) {
+          console.error("Error creating cameras table:", error.message);
+        }
+      },
+    );
+
+    database.run(`
+    CREATE TRIGGER IF NOT EXISTS update_cameras_updatedAt
+    AFTER UPDATE ON cameras
+    FOR EACH ROW
+    BEGIN
+        UPDATE cameras SET updatedAt = CURRENT_TIMESTAMP WHERE _id = OLD._id;
+    END;
+  `);
+
+    /* Create vmix_settings table (singleton) */
+    database.run(
+      `CREATE TABLE IF NOT EXISTS vmix_settings (
+        _id TEXT PRIMARY KEY DEFAULT 'default',
+        host TEXT NOT NULL DEFAULT '127.0.0.1',
+        port INTEGER NOT NULL DEFAULT 8088,
+        enabled INTEGER DEFAULT 0 CHECK (enabled IN (0, 1)),
+        overlayCameraChannel INTEGER DEFAULT 1,
+        overlayCT TEXT DEFAULT '',
+        overlayT TEXT DEFAULT '',
+        overlayBomb TEXT DEFAULT '',
+        updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`,
+      (error) => {
+        if (error) {
+          console.error("Error creating vmix_settings table:", error.message);
+        }
+      },
+    );
+
+    /* Ensure default vmix_settings row exists */
+    database.run(
+      `INSERT OR IGNORE INTO vmix_settings (_id) VALUES ('default')`,
+    );
+
+    database.run(`
+    CREATE TRIGGER IF NOT EXISTS update_vmix_settings_updatedAt
+    AFTER UPDATE ON vmix_settings
+    FOR EACH ROW
+    BEGIN
+        UPDATE vmix_settings SET updatedAt = CURRENT_TIMESTAMP WHERE _id = OLD._id;
+    END;
+  `);
   });
 });

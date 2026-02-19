@@ -7,7 +7,8 @@ import {
   MdAddCircle,
   MdPlayArrow,
   MdSports,
-  MdRefresh
+  MdRefresh,
+  MdSettingsInputComponent
 } from "react-icons/md";
 import { useDrawer } from "../../hooks";
 import { socket } from "../../api/socket";
@@ -25,6 +26,7 @@ const routes: RouteProps[] = [
   { Icon: MdOutlinePerson, title: "Players", to: "players" },
   { Icon: MdGroups, title: "Teams", to: "teams" },
   { Icon: MdSports, title: "Coaches", to: "coaches" },
+  { Icon: MdSettingsInputComponent, title: "vMix Settings", to: "vmix" },
   { Icon: MdDashboard, title: "Dashboard", to: "dashboard" },
 ];
 

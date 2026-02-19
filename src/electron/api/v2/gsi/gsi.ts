@@ -3,6 +3,8 @@ import { CSGOGSI, CSGORaw, CSGO, Score, RoundOutcome } from "csgogsi";
 import { io } from "../sockets/sockets.js";
 import { selectAllSteamids } from "../coaches/coaches.data.js";
 import { selectCurrent, update } from "../matches/matches.data.js";
+import { selectBySteamid } from "../cameras/cameras.data.js";
+import * as VmixService from "../vmix/vmix.service.js";
 
 export const GSI = new CSGOGSI();
 // let last: CSGO;
@@ -10,12 +12,53 @@ export const GSI = new CSGOGSI();
 GSI.regulationMR = 12;
 GSI.overtimeMR = 3;
 
+let lastObservedSteamid: string | null = null;
+let lastBombState: string | null = null;
+
 export const readGameData = async (req: Request, res: Response) => {
   const data: CSGORaw = req.body;
   const coaches = await selectAllSteamids();
   fixGSIData(data, coaches);
   GSI.digest(data);
   io.emit("update", data);
+
+  // vMix: switch camera overlay when observed player changes
+  try {
+    if (data.player && data.player.steamid) {
+      const currentSteamid = data.player.steamid;
+      if (currentSteamid !== lastObservedSteamid) {
+        lastObservedSteamid = currentSteamid;
+        const camera = await selectBySteamid(currentSteamid);
+        if (camera && camera.overlayName) {
+          await VmixService.switchCameraOverlay(camera.overlayName);
+          console.log(
+            `[GSI→vMix] Switched camera to ${camera.overlayName} for player ${currentSteamid}`
+          );
+        }
+      }
+    }
+
+    // vMix: bomb state tracking
+    if (data.round) {
+      const bombState = (data.round as any).bomb;
+      if (bombState !== lastBombState) {
+        if (bombState === "planted" && lastBombState !== "planted") {
+          await VmixService.showBombOverlay();
+          console.log("[GSI→vMix] Bomb planted → showing bomb overlay");
+        } else if (
+          lastBombState === "planted" &&
+          (bombState === "defused" || bombState === "exploded" || !bombState)
+        ) {
+          await VmixService.hideBombOverlay();
+          console.log("[GSI→vMix] Bomb resolved → hiding bomb overlay");
+        }
+        lastBombState = bombState || null;
+      }
+    }
+  } catch (err) {
+    console.error("[GSI→vMix] Error:", err);
+  }
+
   res.sendStatus(200);
 };
 
@@ -62,8 +105,8 @@ GSI.on("intermissionEnd", async () => {
   if (regulationHalftime) {
     shouldSwitch = true;
   } else if (total > regulationEndTotal) {
-    const otRoundsPlayed = total - regulationEndTotal; 
-    const otBlock = GSI.overtimeMR * 2; 
+    const otRoundsPlayed = total - regulationEndTotal;
+    const otBlock = GSI.overtimeMR * 2;
     if (otRoundsPlayed % otBlock === GSI.overtimeMR) {
       shouldSwitch = true;
     }
@@ -82,6 +125,28 @@ GSI.on("intermissionEnd", async () => {
   match.vetos = updatedVetos;
   await update(match);
   io.emit("match", true);
+});
+
+// vMix: show CT/T round win overlay
+GSI.on("roundEnd", async (score: Score) => {
+  try {
+    if (score.winner && score.winner.side) {
+      if (score.winner.side === "CT") {
+        await VmixService.showCTWinOverlay();
+        console.log("[GSI→vMix] CT won round → showing CT overlay");
+      } else if (score.winner.side === "T") {
+        await VmixService.showTWinOverlay();
+        console.log("[GSI→vMix] T won round → showing T overlay");
+      }
+      // Hide round overlays after 5 seconds
+      setTimeout(async () => {
+        await VmixService.hideRoundOverlays();
+        console.log("[GSI→vMix] Hiding round overlays");
+      }, 5000);
+    }
+  } catch (err) {
+    console.error("[GSI→vMix] roundEnd error:", err);
+  }
 });
 
 

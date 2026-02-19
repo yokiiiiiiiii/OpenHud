@@ -6,6 +6,7 @@ import { TeamsPage } from "./pages/Teams/TeamsPage";
 import { AppProviders } from "./context/AppProviders";
 import { Layout } from "./pages/Layout";
 import { CoachesPage } from "./pages/Coaches/CoachesPage";
+import { VmixPage } from "./pages/Vmix/VmixPage";
 
 const AuthenticatedRoutes = () => (
   <AppProviders>
@@ -17,6 +18,7 @@ const AuthenticatedRoutes = () => (
           <Route path="players" element={<PlayersPage />} />
           <Route path="teams" element={<TeamsPage />} />
           <Route path="coaches" element={<CoachesPage />} />
+          <Route path="vmix" element={<VmixPage />} />
           <Route path="dashboard" element={<Dashboard />} />
         </Route>
       </Routes>

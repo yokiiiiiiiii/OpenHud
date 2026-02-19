@@ -6,6 +6,7 @@ import { ThemesProvider } from "./ThemesContext";
 import { DrawerProvider } from "./DrawerContext";
 import { CoachesProvider } from "../pages/Coaches/CoachesContext";
 import { GameDataProvider } from "./GameDataContext";
+import { CamerasProvider } from "../pages/Cameras/CamerasContext";
 
 export const AppProviders: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -16,9 +17,11 @@ export const AppProviders: React.FC<{ children: React.ReactNode }> = ({
         <ThemesProvider>
           <MatchesProvider>
             <PlayersProvider>
-              <DrawerProvider>
-                <TeamsProvider>{children}</TeamsProvider>
-              </DrawerProvider>
+              <CamerasProvider>
+                <DrawerProvider>
+                  <TeamsProvider>{children}</TeamsProvider>
+                </DrawerProvider>
+              </CamerasProvider>
             </PlayersProvider>
           </MatchesProvider>
         </ThemesProvider>
