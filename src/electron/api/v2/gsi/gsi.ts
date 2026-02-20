@@ -127,9 +127,18 @@ GSI.on("intermissionEnd", async () => {
   io.emit("match", true);
 });
 
+let lastWinnerProcessedRound: number | null = null;
+let roundOverlayTimeout: NodeJS.Timeout | null = null;
+
 // vMix: show CT/T round win overlay
 GSI.on("roundEnd", async (score: Score) => {
   try {
+    const currentRound = score.map?.round ?? null;
+    if (currentRound !== null && currentRound === lastWinnerProcessedRound) {
+      return; // Already processed this round
+    }
+    lastWinnerProcessedRound = currentRound;
+
     if (score.winner && score.winner.side) {
       if (score.winner.side === "CT") {
         await VmixService.showCTWinOverlay();
@@ -138,8 +147,13 @@ GSI.on("roundEnd", async (score: Score) => {
         await VmixService.showTWinOverlay();
         console.log("[GSI→vMix] T won round → showing T overlay");
       }
+
+      if (roundOverlayTimeout) {
+        clearTimeout(roundOverlayTimeout);
+      }
+
       // Hide round overlays after 5 seconds
-      setTimeout(async () => {
+      roundOverlayTimeout = setTimeout(async () => {
         await VmixService.hideRoundOverlays();
         console.log("[GSI→vMix] Hiding round overlays");
       }, 5000);

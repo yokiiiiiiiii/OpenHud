@@ -50,7 +50,7 @@ export const sendCommand = async (
         }
 
         console.log(`[vMix] Sending: ${url}`);
-        const response = await fetch(url);
+        const response = await fetch(url, { signal: AbortSignal.timeout(2000) });
         if (!response.ok) {
             console.error(
                 `[vMix] Command failed: ${functionName}, status: ${response.status}`
